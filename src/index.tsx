@@ -21,6 +21,6 @@ export default function Command() {
     );
   }
   if (!data) return <List isLoading={true} />;
-
+  console.log("everything good here")
   return <Directory />;
 }

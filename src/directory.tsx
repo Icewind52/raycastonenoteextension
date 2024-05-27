@@ -1,9 +1,10 @@
-import { ActionPanel, Action, List, Detail, Icon } from "@raycast/api";
+import { ActionPanel, Action, List, Detail, Icon, closeMainWindow } from "@raycast/api";
 import { useSQL } from "@raycast/utils";
 import { useState } from "react";
 import { OneNoteItem, PAGE, types } from "./types";
 import { ONENOTE_MERGED_DB } from "./database";
-import { getAncestorsStr, getIcon, getParentTitle, newNote, openNote, parseDatetime } from "./utils";
+import { getAncestorsStr, getIcon, getParentTitle, newNote, openNote, parseDatetime, getUrl } from "./utils";
+import { exec } from "child_process";
 
 export function getListItems(query: string, elt: OneNoteItem | undefined = undefined) {
   const [sort, setSort] = useState(0);
@@ -56,6 +57,7 @@ function Items(props: { items: OneNoteItem[]; type: number; elt: OneNoteItem | u
     <>
       {props.items.map((item) => {
         if (item.Title.length > 0 && (props.type == 0 || item.Type == props.type))
+          // console.log("🚀 ~ {props.items.map ~ item.Title.length:", item.Title)
           return (
             <List.Item
               key={item.GOID}
@@ -78,11 +80,11 @@ function Items(props: { items: OneNoteItem[]; type: number; elt: OneNoteItem | u
                     shortcut={{ modifiers: [], key: "tab" }}
                   />
                   {/* <Action
-                            title="Open in OneNote"
-                            icon={Icon.Receipt}
-                            onAction={() => openNote(item)}
-                            shortcut={{ modifiers: ["cmd"], key: "enter" }}
-                             /> */}
+                    title="Open in OneNote"
+                    icon={Icon.Receipt}
+                    onAction={() => openNote(item)}
+                    shortcut={{ modifiers: ["ctrl"], key: "enter" }}
+                  /> */}
                 </ActionPanel>
               }
             />
@@ -117,17 +119,13 @@ export function Directory(props: { elt?: OneNoteItem }) {
     if (props.elt) {
       const item = props.elt;
       if (props.elt.Type == PAGE) {
-        return (
-          <Detail
-            navigationTitle={getAncestorsStr(props.elt, " > ", false)}
-            markdown={"# " + props.elt.Content}
-            actions={
-              <ActionPanel>
-                <Action title="Open in OneNote" icon={Icon.Receipt} onAction={() => openNote(item)} />
-              </ActionPanel>
-            }
-          />
-        );
+        var url = item.Type == PAGE ? `onenote:#page-id=${item.GUID}` : ''
+        let cmd = "open " + url?.replaceAll(" ", "%20").replaceAll("&", "%26").replaceAll("{", "%7B").replaceAll("}", "%7D");
+        if (cmd !== undefined) {
+          exec(cmd, (_err, _sdtout, _stderr) => {
+            closeMainWindow();
+          });
+        }
       } else {
         const query = `SELECT * FROM Entities WHERE ParentGOID = "${props.elt.GOID}" ORDER BY RecentTime DESC;`;
         return getListItems(query, props.elt);
